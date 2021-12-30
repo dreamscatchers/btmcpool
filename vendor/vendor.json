@@ -187,6 +187,12 @@
 			"revisionTime": "2018-11-06T05:40:20Z"
 		},
 		{
+			"checksumSHA1": "3fQYkK+WGGYRa8dw2sc8iFt7AGM=",
+			"path": "github.com/go-sql-driver/mysql",
+			"revision": "6cf3092b0e12f6e197de3ed6aa2acfeac322a9bb",
+			"revisionTime": "2021-08-25T08:32:50Z"
+		},
+		{
 			"checksumSHA1": "Y2MOwzNZfl4NRNDbLCZa6sgx7O0=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "1918e1ff6ffd2be7bed0553df8650672c3bfe80d",
