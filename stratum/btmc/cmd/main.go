@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
 	pb "github.com/bytom/btmcpool/common/format/generated"
 	"github.com/bytom/btmcpool/common/logger"
 	"github.com/bytom/btmcpool/common/rpc/hostprovider"
@@ -33,8 +35,16 @@ func main() {
 		vars.GetFloat64("ip.throughput_ratio", 1.2),
 		vars.GetFloat64("ip.connection_ratio", 1.2),
 		vars.GetStringSlice("ip.white_list", []string{}))
+	user := vars.GetString("db.user", "user")
+	password := vars.GetString("db.password", "password")
+  dbName := vars.GetString("db.name", "pool")
+	db, err := sql.Open("mysql", user + ":" + password + "@tcp(127.0.0.1:3306)/" + dbName)
+	if err != nil {
+		logger.Error("can't connect to database")
+		return
+	}
 	// init server global state
-	state, err := ss.InitServerState(context.Background(), connCtl, stratumId, uint(maxConn))
+	state, err := ss.InitServerState(context.Background(), connCtl, stratumId, uint(maxConn), db)
 	if err != nil {
 		logger.Error("can't create server state")
 		return

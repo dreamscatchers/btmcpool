@@ -17,3 +17,6 @@ node.name: btmc_mainnet
 node.sync_interval: 10ms
 
 service.port: 11002
+db.user: sammy
+db.password: password
+db.name: pool

@@ -4,7 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
-
+	"strconv"
+	"database/sql"
 	"github.com/cornelk/hashmap"
 
 	"github.com/bytom/btmcpool/common/logger"
@@ -24,14 +25,15 @@ type ServerState struct {
 	handlerMap    map[string]HandlerFunc
 	templateLock  sync.RWMutex
 	blockTemplate BlockTemplate
-	sessionMap    *hashmap.HashMap // active sessions. Must allow concurrent access.
+  sessionMap    *hashmap.HashMap // active sessions. Must allow concurrent access.
 	idManager     *sessionIdManager
 	ssConnCtrl    *connCtrl
 	BtSignal      chan bool
+	dbHandler			*sql.DB
 }
 
 // InitServerState initializes server states
-func InitServerState(ctx context.Context, connCtrl *connCtrl, id int, maxSessions uint) (*ServerState, error) {
+func InitServerState(ctx context.Context, connCtrl *connCtrl, id int, maxSessions uint, db *sql.DB) (*ServerState, error) {
 	logger.Info("init server state", "id", id)
 	return &ServerState{
 		ctx:        ctx,
@@ -41,6 +43,7 @@ func InitServerState(ctx context.Context, connCtrl *connCtrl, id int, maxSession
 		idManager:  newSessionIdManager(maxSessions),
 		ssConnCtrl: connCtrl,
 		BtSignal:   make(chan bool, 1),
+		dbHandler: db,
 	}, nil
 }
 
@@ -115,6 +118,20 @@ func (s *ServerState) broadcast() {
 		}(m.Value.(*TcpSession))
 	}
 }
+
+func (s *ServerState) AddRecord(account string, name string, isBlock int) error {
+		head := "INSERT INTO shares (timestamp, account, name, block) VALUES ("
+		timestamp := "FROM_UNIXTIME(" + strconv.FormatInt(time.Now().Unix(), 10) + ")"
+		tail := "," + account + ", " + name + ", " +  strconv.Itoa(isBlock) + ");"
+		query := head + timestamp + tail
+    insert, err := s.dbHandler.Query(query)
+    defer insert.Close()
+		if err != nil {
+			return err
+		}
+		return nil
+}
+
 
 // NewServer connects different server conponents together and starts listening to new connections
 func NewServer(port, maxConn int,

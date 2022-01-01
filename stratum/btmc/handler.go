@@ -177,10 +177,12 @@ func (request *SubmitReq) handleSubmit(session *ss.TcpSession) error {
 		return nil
 	}
 
+	account, name := worker.GetWorker()
 	// send reply according to verification result
 	switch share.GetState() {
 	case ss.ShareStateAccepted:
 		session.SessionCtl.MinerAcCnt++
+		session.GetServerState().AddRecord(account, name, 0)
 		if err := session.Reply(request.Id, &statusReply{Status: "OK"}); err != nil {
 			logger.Error("failed to send reply",
 				"method", request.Method,
@@ -194,6 +196,7 @@ func (request *SubmitReq) handleSubmit(session *ss.TcpSession) error {
 	case ss.ShareStateBlock:
 		// 8.1 submit block to node
 		session.SessionCtl.MinerAcCnt++
+		session.GetServerState().AddRecord(account, name, 1)
 		logger.Info("found block",
 			"session_id", session.GetId(),
 			"session_ip", session.GetIp(),
