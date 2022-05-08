@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
 	pb "github.com/bytom/btmcpool/common/format/generated"
 	"github.com/bytom/btmcpool/common/logger"
 	"github.com/bytom/btmcpool/common/rpc/hostprovider"
@@ -16,7 +15,27 @@ import (
 	"github.com/bytom/btmcpool/common/vars"
 	ss "github.com/bytom/btmcpool/stratum"
 	"github.com/bytom/btmcpool/stratum/btmc"
+	_ "github.com/go-sql-driver/mysql"
 )
+
+func addRecord(db *sql.DB, w ss.WriterRec) error {
+	head := "INSERT INTO shares (timestamp, account, name, block) VALUES ("
+	timestamp := "FROM_UNIXTIME(" + strconv.FormatInt(time.Now().Unix(), 10) + ")"
+	tail := ",'" + w.Account + "', '" + w.Name + "'," + strconv.Itoa(w.Block) + ");"
+	query := head + timestamp + tail
+	insert, err := db.Query(query)
+	defer insert.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func daemon(db *sql.DB, c chan ss.WriterRec) {
+	for s := range c {
+		addRecord(db, s)
+	}
+}
 
 func main() {
 	vars.Init()
@@ -37,14 +56,17 @@ func main() {
 		vars.GetStringSlice("ip.white_list", []string{}))
 	user := vars.GetString("db.user", "user")
 	password := vars.GetString("db.password", "password")
-  dbName := vars.GetString("db.name", "pool")
-	db, err := sql.Open("mysql", user + ":" + password + "@tcp(127.0.0.1:3306)/" + dbName)
+	dbName := vars.GetString("db.name", "pool")
+	db, err := sql.Open("mysql", user+":"+password+"@tcp(127.0.0.1:3306)/"+dbName)
 	if err != nil {
 		logger.Error("can't connect to database")
 		return
 	}
+	c := make(chan ss.WriterRec)
+	go daemon(db, c)
+
 	// init server global state
-	state, err := ss.InitServerState(context.Background(), connCtl, stratumId, uint(maxConn), db)
+	state, err := ss.InitServerState(context.Background(), connCtl, stratumId, uint(maxConn), c)
 	if err != nil {
 		logger.Error("can't create server state")
 		return
